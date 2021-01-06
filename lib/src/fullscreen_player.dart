@@ -17,15 +17,20 @@ class FullscreenPlayer extends StatefulWidget {
   final String qualityValue;
   final Color backgroundColor;
 
+  ///[overlayTimeOut] in seconds: decide after how much second overlay should vanishes
+  ///minimum 3 seconds of timeout is stacked
+  final int overlayTimeOut;
+
   FullscreenPlayer({
     @required this.id,
-    this.autoPlay,
+    this.autoPlay = false,
     this.looping,
     this.controller,
     this.position,
     this.initFuture,
     this.qualityValue,
     this.backgroundColor,
+    @required this.overlayTimeOut,
     Key key,
   }) : super(key: key);
 
@@ -38,7 +43,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   String _id;
   bool autoPlay = false;
   bool looping = false;
-  bool _overlay = false;
+  bool _overlay = true;
   bool fullScreen = true;
 
   VideoPlayerController controller;
@@ -71,6 +76,9 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   double doubleTapLMarginFS = 10;
   double doubleTapLWidthFS = 700;
   double doubleTapLHeightFS = 400;
+
+  //overlay timeout handler
+  Timer overlayTimer;
 
   @override
   void initState() {
@@ -105,6 +113,39 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
     });
     Navigator.pop(context, _controller.value.position.inSeconds);
     return Future.value(true);
+  }
+
+  ///display or vanishes the overlay i.e playing controls, etc.
+  void _toogleOverlay() {
+    //Inorder to avoid descrepancy in overlay popping up & vanishing out
+    overlayTimer?.cancel();
+    if (!_overlay) {
+      overlayTimer = Timer(Duration(seconds: widget.overlayTimeOut), () {
+        setState(() {
+          _overlay = false;
+          doubleTapRHeightFS = videoHeight + 36;
+          doubleTapLHeightFS = videoHeight;
+          doubleTapRMarginFS = 0;
+          doubleTapLMarginFS = 0;
+        });
+      });
+    }
+    // Edit the size of the double tap area when showing the overlay.
+    // Made to open the "Full Screen" and "Quality" buttons
+    setState(() {
+      _overlay = !_overlay;
+      if (_overlay) {
+        doubleTapRHeightFS = videoHeight - 36;
+        doubleTapLHeightFS = videoHeight - 10;
+        doubleTapRMarginFS = 36;
+        doubleTapLMarginFS = 10;
+      } else if (!_overlay) {
+        doubleTapRHeightFS = videoHeight + 36;
+        doubleTapLHeightFS = videoHeight;
+        doubleTapRMarginFS = 0;
+        doubleTapLMarginFS = 0;
+      }
+    });
   }
 
   @override
@@ -163,6 +204,20 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                           SystemChrome.setEnabledSystemUIOverlays(
                               [SystemUiOverlay.bottom]);
 
+                          //vanish overlayer if so.
+                          if (_overlay) {
+                            overlayTimer = Timer(
+                                Duration(seconds: widget.overlayTimeOut), () {
+                              setState(() {
+                                _overlay = false;
+                                doubleTapRHeightFS = videoHeight + 36;
+                                doubleTapLHeightFS = videoHeight;
+                                doubleTapRMarginFS = 0;
+                                doubleTapLMarginFS = 0;
+                              });
+                            });
+                          }
+
                           // Rendering player elements
                           return Stack(
                             children: <Widget>[
@@ -187,22 +242,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                       }),
                   // Edit the size of the double tap area when showing the overlay.
                   // Made to open the "Full Screen" and "Quality" buttons
-                  onTap: () {
-                    setState(() {
-                      _overlay = !_overlay;
-                      if (_overlay) {
-                        doubleTapRHeightFS = videoHeight - 36;
-                        doubleTapLHeightFS = videoHeight - 10;
-                        doubleTapRMarginFS = 36;
-                        doubleTapLMarginFS = 10;
-                      } else if (!_overlay) {
-                        doubleTapRHeightFS = videoHeight + 36;
-                        doubleTapLHeightFS = videoHeight;
-                        doubleTapRMarginFS = 0;
-                        doubleTapLMarginFS = 0;
-                      }
-                    });
-                  },
+                  onTap: _toogleOverlay,
                 ),
                 GestureDetector(
                     child: Container(
@@ -216,22 +256,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     ),
                     // Edit the size of the double tap area when showing the overlay.
                     // Made to open the "Full Screen" and "Quality" buttons
-                    onTap: () {
-                      setState(() {
-                        _overlay = !_overlay;
-                        if (_overlay) {
-                          doubleTapRHeightFS = videoHeight - 36;
-                          doubleTapLHeightFS = videoHeight - 10;
-                          doubleTapRMarginFS = 36;
-                          doubleTapLMarginFS = 10;
-                        } else if (!_overlay) {
-                          doubleTapRHeightFS = videoHeight + 36;
-                          doubleTapLHeightFS = videoHeight;
-                          doubleTapRMarginFS = 0;
-                          doubleTapLMarginFS = 0;
-                        }
-                      });
-                    },
+                    onTap: _toogleOverlay,
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(
@@ -251,22 +276,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     ),
                     // Edit the size of the double tap area when showing the overlay.
                     // Made to open the "Full Screen" and "Quality" buttons
-                    onTap: () {
-                      setState(() {
-                        _overlay = !_overlay;
-                        if (_overlay) {
-                          doubleTapRHeightFS = videoHeight - 36;
-                          doubleTapLHeightFS = videoHeight - 10;
-                          doubleTapRMarginFS = 36;
-                          doubleTapLMarginFS = 10;
-                        } else if (!_overlay) {
-                          doubleTapRHeightFS = videoHeight + 36;
-                          doubleTapLHeightFS = videoHeight;
-                          doubleTapRMarginFS = 0;
-                          doubleTapLMarginFS = 0;
-                        }
-                      });
-                    },
+                    onTap: _toogleOverlay,
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(

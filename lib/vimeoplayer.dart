@@ -1,5 +1,7 @@
 library vimeoplayer;
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
@@ -19,18 +21,20 @@ class VimeoPlayer extends StatefulWidget {
   final Color fullScreenBackgroundColor;
 
   ///[overlayTimeOut] in seconds: decide after how much second overlay should vanishes
+  ///minimum 3 seconds of timeout is stacked
   final int overlayTimeOut;
 
   VimeoPlayer({
     @required this.id,
-    this.autoPlay,
+    this.autoPlay = false,
     this.looping,
     this.position,
-    this.commencingOverlay,
+    this.commencingOverlay = true,
     this.fullScreenBackgroundColor,
-    this.overlayTimeOut,
+    int overlayTimeOut,
     Key key,
-  }) : super(key: key);
+  })  : this.overlayTimeOut = max(overlayTimeOut, 3),
+        super(key: key);
 
   @override
   _VimeoPlayerState createState() => _VimeoPlayerState(
@@ -73,6 +77,9 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
   double doubleTapLWidth = 400;
   double doubleTapLHeight = 160;
 
+  //overlay timeout handler
+  Timer overlayTimer;
+
   @override
   void initState() {
     //Create class
@@ -100,6 +107,39 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
 
     super.initState();
+  }
+
+  ///display or vanishes the overlay i.e playing controls, etc.
+  void _toogleOverlay() {
+    //Inorder to avoid descrepancy in overlay popping up & vanishing out
+    overlayTimer?.cancel();
+    if (!_overlay) {
+      overlayTimer = Timer(Duration(seconds: widget.overlayTimeOut), () {
+        setState(() {
+          _overlay = false;
+          doubleTapRHeight = videoHeight + 36;
+          doubleTapLHeight = videoHeight + 16;
+          doubleTapRMargin = 0;
+          doubleTapLMargin = 0;
+        });
+      });
+    }
+    // Edit the size of the double tap area when showing the overlay.
+    // Made to open the "Full Screen" and "Quality" buttons
+    setState(() {
+      _overlay = !_overlay;
+      if (_overlay) {
+        doubleTapRHeight = videoHeight - 36;
+        doubleTapLHeight = videoHeight - 10;
+        doubleTapRMargin = 36;
+        doubleTapLMargin = 10;
+      } else if (!_overlay) {
+        doubleTapRHeight = videoHeight + 36;
+        doubleTapLHeight = videoHeight + 16;
+        doubleTapRMargin = 0;
+        doubleTapLMargin = 0;
+      }
+    });
   }
 
   // Draw the player elements
@@ -140,6 +180,20 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                     _seek = false;
                   }
 
+                  //vanish overlayer if so.
+                  if (_overlay) {
+                    overlayTimer =
+                        Timer(Duration(seconds: widget.overlayTimeOut), () {
+                      setState(() {
+                        _overlay = false;
+                        doubleTapRHeight = videoHeight + 36;
+                        doubleTapLHeight = videoHeight + 16;
+                        doubleTapRMargin = 0;
+                        doubleTapLMargin = 0;
+                      });
+                    });
+                  }
+
                   // Rendering player elements
                   return Stack(
                     children: <Widget>[
@@ -163,27 +217,10 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                 }
               },
             ),
-            onTap: () {
-              // Edit the size of the double tap area when showing the overlay.
-              // Made to open the "Full Screen" and "Quality" buttons
-              setState(() {
-                _overlay = !_overlay;
-                if (_overlay) {
-                  doubleTapRHeight = videoHeight - 36;
-                  doubleTapLHeight = videoHeight - 10;
-                  doubleTapRMargin = 36;
-                  doubleTapLMargin = 10;
-                } else if (!_overlay) {
-                  doubleTapRHeight = videoHeight + 36;
-                  doubleTapLHeight = videoHeight + 16;
-                  doubleTapRMargin = 0;
-                  doubleTapLMargin = 0;
-                }
-              });
-            },
+            onTap: _toogleOverlay,
           ),
           GestureDetector(
-              // ======= SEEKER ======= //
+              // ======= Rewind ======= //
               child: Container(
                 width: doubleTapLWidth / 2 - 30,
                 height: doubleTapLHeight - 46,
@@ -196,22 +233,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
 
               // Resize double tap blocks. Needed to open buttons
               // "Full screen" and "Quality" with overlay enabled
-              onTap: () {
-                setState(() {
-                  _overlay = !_overlay;
-                  if (_overlay) {
-                    doubleTapRHeight = videoHeight - 36;
-                    doubleTapLHeight = videoHeight - 10;
-                    doubleTapRMargin = 36;
-                    doubleTapLMargin = 10;
-                  } else if (!_overlay) {
-                    doubleTapRHeight = videoHeight + 36;
-                    doubleTapLHeight = videoHeight + 16;
-                    doubleTapRMargin = 0;
-                    doubleTapLMargin = 0;
-                  }
-                });
-              },
+              onTap: _toogleOverlay,
               onDoubleTap: () {
                 setState(() {
                   _controller.seekTo(Duration(
@@ -231,22 +253,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
               ),
               // Resize double tap blocks. Needed to open buttons
               // "Full screen" and "Quality" with overlay enabled
-              onTap: () {
-                setState(() {
-                  _overlay = !_overlay;
-                  if (_overlay) {
-                    doubleTapRHeight = videoHeight - 36;
-                    doubleTapLHeight = videoHeight - 10;
-                    doubleTapRMargin = 36;
-                    doubleTapLMargin = 10;
-                  } else if (!_overlay) {
-                    doubleTapRHeight = videoHeight + 36;
-                    doubleTapLHeight = videoHeight + 16;
-                    doubleTapRMargin = 0;
-                    doubleTapLMargin = 0;
-                  }
-                });
-              },
+              onTap: _toogleOverlay,
               onDoubleTap: () {
                 setState(() {
                   _controller.seekTo(Duration(
@@ -357,6 +364,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                                     qualityValue: _qualityValue,
                                     backgroundColor:
                                         widget.fullScreenBackgroundColor,
+                                    overlayTimeOut: widget.overlayTimeOut,
                                   ),
                               transitionsBuilder: (___,
                                   Animation<double> animation,
