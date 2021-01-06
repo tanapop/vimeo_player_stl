@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'quality_links.dart';
 import 'dart:async';
 
-//Класс видео плеера во весь экран
+/// Full screen video player class
 class FullscreenPlayer extends StatefulWidget {
   final String id;
   final bool autoPlay;
@@ -56,15 +56,15 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   QualityLinks _quality;
   Map _qualityValues;
 
-  //Переменная перемотки
+  // Rewind variable
   bool _seek = true;
 
-  //Переменные видео
+  // Video variables
   double videoHeight;
   double videoWidth;
   double videoMargin;
 
-  //Переменные под зоны дабл-тапа
+  // Variables for double-tap zones
   double doubleTapRMarginFS = 36;
   double doubleTapRWidthFS = 700;
   double doubleTapRHeightFS = 300;
@@ -74,11 +74,11 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
 
   @override
   void initState() {
-    //Инициализация контроллеров видео при получении данных из Vimeo
+    // Initialize video controllers when receiving data from Vimeo
     _controller = controller;
     if (autoPlay) _controller.play();
 
-    // Подгрузка списка качеств видео
+    // Load the list of video qualities
     _quality = QualityLinks(_id); //Create class
     _quality.getQualitiesSync().then((value) {
       _qualityValues = value;
@@ -93,8 +93,8 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
     super.initState();
   }
 
-  //Ослеживаем пользовательского нажатие назад и переводим
-  // на экран с плеером не в режиме фуллскрин, возвращаем ориентацию
+  // Track the user's click back and translate
+  // the screen with the player is not in fullscreen mode, return the orientation
   Future<bool> _onWillPop() {
     setState(() {
       _controller.pause();
@@ -122,7 +122,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                       future: initFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.done) {
-                          //Управление шириной и высотой видео
+                          // Control the width and height of the video
                           double delta = MediaQuery.of(context).size.width -
                               MediaQuery.of(context).size.height *
                                   _controller.value.aspectRatio;
@@ -137,32 +137,33 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                             videoHeight = MediaQuery.of(context).size.height;
                             videoWidth =
                                 videoHeight * _controller.value.aspectRatio;
-                        videoMargin =
-                            (MediaQuery.of(context).size.width - videoWidth) /
+                            videoMargin = (MediaQuery.of(context).size.width -
+                                    videoWidth) /
                                 2;
                           }
-                          //Переменные дабл тапа, зависимые от размеров видео
+                          // Variables double tap, depending on the size of the video
                           doubleTapRWidthFS = videoWidth;
                           doubleTapRHeightFS = videoHeight - 36;
                           doubleTapLWidthFS = videoWidth;
                           doubleTapLHeightFS = videoHeight;
 
-                          //Сразу при входе в режим фуллскрин перематываем
-                          // на нужное место
+                          // Immediately upon entering the fullscreen mode, rewind
+                          // to the right place
                           if (_seek && fullScreen) {
                             _controller.seekTo(Duration(seconds: position));
                             _seek = false;
                           }
 
-                          //Переходи на нужное место при смене качества
-                      if (_seek && _controller.value.duration.inSeconds > 2) {
+                          // Go to the right place when changing quality
+                          if (_seek &&
+                              _controller.value.duration.inSeconds > 2) {
                             _controller.seekTo(Duration(seconds: position));
                             _seek = false;
                           }
                           SystemChrome.setEnabledSystemUIOverlays(
                               [SystemUiOverlay.bottom]);
 
-                          //Отрисовка элементов плеера
+                          // Rendering player elements
                           return Stack(
                             children: <Widget>[
                               Container(
@@ -184,8 +185,8 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                               ));
                         }
                       }),
-                  //Редактируем размер области дабл тапа при показе оверлея.
-                  // Сделано для открытия кнопок "Во весь экран" и "Качество"
+                  // Edit the size of the double tap area when showing the overlay.
+                  // Made to open the "Full Screen" and "Quality" buttons
                   onTap: () {
                     setState(() {
                       _overlay = !_overlay;
@@ -207,14 +208,14 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     child: Container(
                       width: doubleTapLWidthFS / 2 - 30,
                       height: doubleTapLHeightFS - 44,
-                  margin:
-                      EdgeInsets.fromLTRB(0, 0, doubleTapLWidthFS / 2 + 30, 40),
+                      margin: EdgeInsets.fromLTRB(
+                          0, 0, doubleTapLWidthFS / 2 + 30, 40),
                       decoration: BoxDecoration(
                           //color: Colors.red,
                           ),
                     ),
-                    //Редактируем размер области дабл тапа при показе оверлея.
-                    // Сделано для открытия кнопок "Во весь экран" и "Качество"
+                    // Edit the size of the double tap area when showing the overlay.
+                    // Made to open the "Full Screen" and "Quality" buttons
                     onTap: () {
                       setState(() {
                         _overlay = !_overlay;
@@ -234,21 +235,22 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(
-                        seconds: _controller.value.position.inSeconds - 10));
+                            seconds:
+                                _controller.value.position.inSeconds - 10));
                       });
                     }),
                 GestureDetector(
                     child: Container(
                       width: doubleTapRWidthFS / 2 - 45,
                       height: doubleTapRHeightFS - 80,
-                  margin: EdgeInsets.fromLTRB(doubleTapRWidthFS / 2 + 45, 0, 0,
-                      doubleTapLMarginFS + 20),
+                      margin: EdgeInsets.fromLTRB(doubleTapRWidthFS / 2 + 45, 0,
+                          0, doubleTapLMarginFS + 20),
                       decoration: BoxDecoration(
                           //color: Colors.red,
                           ),
                     ),
-                    //Редактируем размер области дабл тапа при показе оверлея.
-                    // Сделано для открытия кнопок "Во весь экран" и "Качество"
+                    // Edit the size of the double tap area when showing the overlay.
+                    // Made to open the "Full Screen" and "Quality" buttons
                     onTap: () {
                       setState(() {
                         _overlay = !_overlay;
@@ -268,7 +270,8 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(
-                        seconds: _controller.value.position.inSeconds + 10));
+                            seconds:
+                                _controller.value.position.inSeconds + 10));
                       });
                     }),
               ],
@@ -284,7 +287,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
           _qualityValues.forEach((elem, value) => (children.add(new ListTile(
               title: new Text(" ${elem.toString()} fps"),
               onTap: () => {
-                    //Обновление состояние приложения и перерисовка
+                    // Update application state and redraw
                     setState(() {
                       _controller.pause();
                       _controller = VideoPlayerController.network(value);
@@ -376,7 +379,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     }),
               ),
               Container(
-                //===== Ползунок =====//
+                // ===== Slider ===== //
                 margin: EdgeInsets.only(
                     top: videoHeight - 40, left: videoMargin), //CHECK IT
                 child: _videoOverlaySlider(),
@@ -386,7 +389,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
         : Center();
   }
 
-  //=================== ПОЛЗУНОК ===================//
+  // ==================== SLIDER =================== //
   Widget _videoOverlaySlider() {
     return ValueListenableBuilder(
       valueListenable: _controller,
