@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'quality_links.dart';
 import 'dart:async';
 
+import '../vimeoplayer.dart';
+
 /// Full screen video player class
 class FullscreenPlayer extends StatefulWidget {
   final String id;
@@ -17,15 +19,25 @@ class FullscreenPlayer extends StatefulWidget {
   final String qualityValue;
   final Color backgroundColor;
 
+  ///[overlayTimeOut] in seconds: decide after how much second overlay should vanishes
+  ///minimum 3 seconds of timeout is stacked
+  final int overlayTimeOut;
+
+  final Color loadingIndicatorColor;
+  final Color controlsColor;
+
   FullscreenPlayer({
     @required this.id,
-    this.autoPlay,
+    @required this.overlayTimeOut,
+    this.autoPlay = false,
     this.looping,
     this.controller,
     this.position,
     this.initFuture,
     this.qualityValue,
     this.backgroundColor,
+    this.loadingIndicatorColor,
+    this.controlsColor,
     Key key,
   }) : super(key: key);
 
@@ -38,7 +50,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   String _id;
   bool autoPlay = false;
   bool looping = false;
-  bool _overlay = false;
+  bool _overlay = true;
   bool fullScreen = true;
 
   VideoPlayerController controller;
@@ -72,6 +84,11 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   double doubleTapLWidthFS = 700;
   double doubleTapLHeightFS = 400;
 
+  //overlay timeout handler
+  Timer overlayTimer;
+  //indicate if overlay to be display on commencing video or not
+  bool initialOverlay = true;
+
   @override
   void initState() {
     // Initialize video controllers when receiving data from Vimeo
@@ -96,6 +113,8 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   // Track the user's click back and translate
   // the screen with the player is not in fullscreen mode, return the orientation
   Future<bool> _onWillPop() {
+    final playing = _controller.value.isPlaying;
+    overlayTimer?.cancel();
     setState(() {
       _controller.pause();
       SystemChrome.setPreferredOrientations(
@@ -103,8 +122,47 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
       SystemChrome.setEnabledSystemUIOverlays(
           [SystemUiOverlay.top, SystemUiOverlay.bottom]);
     });
-    Navigator.pop(context, _controller.value.position.inSeconds);
+    Navigator.pop(
+      context,
+      ControllerDetails(
+        playingStatus: playing,
+        position: _controller.value.position.inSeconds,
+      ),
+    );
     return Future.value(true);
+  }
+
+  ///display or vanishes the overlay i.e playing controls, etc.
+  void _toogleOverlay() {
+    //Inorder to avoid descrepancy in overlay popping up & vanishing out
+    overlayTimer?.cancel();
+    if (!_overlay) {
+      overlayTimer = Timer(Duration(seconds: widget.overlayTimeOut), () {
+        setState(() {
+          _overlay = false;
+          doubleTapRHeightFS = videoHeight + 36;
+          doubleTapLHeightFS = videoHeight;
+          doubleTapRMarginFS = 0;
+          doubleTapLMarginFS = 0;
+        });
+      });
+    }
+    // Edit the size of the double tap area when showing the overlay.
+    // Made to open the "Full Screen" and "Quality" buttons
+    setState(() {
+      _overlay = !_overlay;
+      if (_overlay) {
+        doubleTapRHeightFS = videoHeight - 36;
+        doubleTapLHeightFS = videoHeight - 10;
+        doubleTapRMarginFS = 36;
+        doubleTapLMarginFS = 10;
+      } else if (!_overlay) {
+        doubleTapRHeightFS = videoHeight + 36;
+        doubleTapLHeightFS = videoHeight;
+        doubleTapRMarginFS = 0;
+        doubleTapLMarginFS = 0;
+      }
+    });
   }
 
   @override
@@ -163,6 +221,21 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                           SystemChrome.setEnabledSystemUIOverlays(
                               [SystemUiOverlay.bottom]);
 
+                          //vanish overlayer if so.
+                          if (initialOverlay) {
+                            overlayTimer = Timer(
+                                Duration(seconds: widget.overlayTimeOut), () {
+                              setState(() {
+                                _overlay = false;
+                                doubleTapRHeightFS = videoHeight + 36;
+                                doubleTapLHeightFS = videoHeight;
+                                doubleTapRMarginFS = 0;
+                                doubleTapLMarginFS = 0;
+                              });
+                            });
+                            initialOverlay = false;
+                          }
+
                           // Rendering player elements
                           return Stack(
                             children: <Widget>[
@@ -180,29 +253,16 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                               heightFactor: 6,
                               child: CircularProgressIndicator(
                                 strokeWidth: 4,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFF22A3D2)),
+                                valueColor: widget.loadingIndicatorColor != null
+                                    ? AlwaysStoppedAnimation<Color>(
+                                        widget.loadingIndicatorColor)
+                                    : null,
                               ));
                         }
                       }),
                   // Edit the size of the double tap area when showing the overlay.
                   // Made to open the "Full Screen" and "Quality" buttons
-                  onTap: () {
-                    setState(() {
-                      _overlay = !_overlay;
-                      if (_overlay) {
-                        doubleTapRHeightFS = videoHeight - 36;
-                        doubleTapLHeightFS = videoHeight - 10;
-                        doubleTapRMarginFS = 36;
-                        doubleTapLMarginFS = 10;
-                      } else if (!_overlay) {
-                        doubleTapRHeightFS = videoHeight + 36;
-                        doubleTapLHeightFS = videoHeight;
-                        doubleTapRMarginFS = 0;
-                        doubleTapLMarginFS = 0;
-                      }
-                    });
-                  },
+                  onTap: _toogleOverlay,
                 ),
                 GestureDetector(
                     child: Container(
@@ -216,22 +276,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     ),
                     // Edit the size of the double tap area when showing the overlay.
                     // Made to open the "Full Screen" and "Quality" buttons
-                    onTap: () {
-                      setState(() {
-                        _overlay = !_overlay;
-                        if (_overlay) {
-                          doubleTapRHeightFS = videoHeight - 36;
-                          doubleTapLHeightFS = videoHeight - 10;
-                          doubleTapRMarginFS = 36;
-                          doubleTapLMarginFS = 10;
-                        } else if (!_overlay) {
-                          doubleTapRHeightFS = videoHeight + 36;
-                          doubleTapLHeightFS = videoHeight;
-                          doubleTapRMarginFS = 0;
-                          doubleTapLMarginFS = 0;
-                        }
-                      });
-                    },
+                    onTap: _toogleOverlay,
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(
@@ -251,22 +296,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     ),
                     // Edit the size of the double tap area when showing the overlay.
                     // Made to open the "Full Screen" and "Quality" buttons
-                    onTap: () {
-                      setState(() {
-                        _overlay = !_overlay;
-                        if (_overlay) {
-                          doubleTapRHeightFS = videoHeight - 36;
-                          doubleTapLHeightFS = videoHeight - 10;
-                          doubleTapRMarginFS = 36;
-                          doubleTapLMarginFS = 10;
-                        } else if (!_overlay) {
-                          doubleTapRHeightFS = videoHeight + 36;
-                          doubleTapLHeightFS = videoHeight;
-                          doubleTapRMarginFS = 0;
-                          doubleTapLMarginFS = 0;
-                        }
-                      });
-                    },
+                    onTap: _toogleOverlay,
                     onDoubleTap: () {
                       setState(() {
                         _controller.seekTo(Duration(
@@ -337,13 +367,26 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                       bottom: videoHeight / 2 - 30,
                     ),
                     icon: _controller.value.isPlaying
-                        ? Icon(Icons.pause, size: 60.0)
-                        : Icon(Icons.play_arrow, size: 60.0),
+                        ? Icon(
+                            Icons.pause,
+                            size: 60.0,
+                            color: widget.controlsColor,
+                          )
+                        : Icon(
+                            Icons.play_arrow,
+                            size: 60.0,
+                            color: widget.controlsColor,
+                          ),
                     onPressed: () {
                       setState(() {
-                        _controller.value.isPlaying
-                            ? _controller.pause()
-                            : _controller.play();
+                        //vanish the overlay if play button is pressed
+                        if (!_controller.value.isPlaying) {
+                          overlayTimer?.cancel();
+                          _controller.play();
+                          _overlay = !_overlay;
+                        } else {
+                          _controller.pause();
+                        }
                       });
                     }),
               ),
@@ -352,8 +395,11 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                     top: videoHeight - 80, left: videoWidth + videoMargin - 50),
                 child: IconButton(
                     alignment: AlignmentDirectional.center,
-                    icon: Icon(Icons.fullscreen, size: 30.0),
+                    icon: Icon(Icons.fullscreen,
+                        size: 30.0, color: widget.controlsColor),
                     onPressed: () {
+                      final playing = _controller.value.isPlaying;
+                      overlayTimer?.cancel();
                       setState(() {
                         _controller.pause();
                         SystemChrome.setPreferredOrientations([
@@ -364,13 +410,26 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                             [SystemUiOverlay.top, SystemUiOverlay.bottom]);
                       });
                       Navigator.pop(
-                          context, _controller.value.position.inSeconds);
+                        context,
+                        ControllerDetails(
+                          playingStatus: playing,
+                          position: _controller.value.position.inSeconds,
+                        ),
+                      );
+                      // Navigator.pop(context, {
+                      //   'position': _controller.value.position.inSeconds,
+                      //   'status': playing
+                      // });
                     }),
               ),
               Container(
                 margin: EdgeInsets.only(left: videoWidth + videoMargin - 48),
                 child: IconButton(
-                    icon: Icon(Icons.settings, size: 26.0),
+                    icon: Icon(
+                      Icons.settings,
+                      size: 26.0,
+                      color: widget.controlsColor,
+                    ),
                     onPressed: () {
                       position = _controller.value.position.inSeconds;
                       _seek = true;
@@ -402,6 +461,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                 alignment: Alignment(0, 0),
                 child: Text(
                   '${_twoDigits(value.position.inMinutes)}:${_twoDigits(value.position.inSeconds - value.position.inMinutes * 60)}',
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
               Container(
@@ -423,6 +483,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                 alignment: Alignment(0, 0),
                 child: Text(
                   '${_twoDigits(value.duration.inMinutes)}:${_twoDigits(value.duration.inSeconds - value.duration.inMinutes * 60)}',
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ],
@@ -436,4 +497,9 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
 
   ///Convert the integer number in atleast 2 digit format (i.e appending 0 in front if any)
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+  @override
+  void dispose() {
+    overlayTimer?.cancel();
+  }
 }

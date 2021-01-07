@@ -1,11 +1,21 @@
 library vimeoplayer;
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 import 'src/quality_links.dart';
 import 'dart:async';
 import 'src/fullscreen_player.dart';
+
+///holds the viedo controller details
+class ControllerDetails {
+  int position;
+  bool playingStatus;
+
+  ControllerDetails({this.position, this.playingStatus});
+}
 
 // Video player class
 class VimeoPlayer extends StatefulWidget {
@@ -19,18 +29,25 @@ class VimeoPlayer extends StatefulWidget {
   final Color fullScreenBackgroundColor;
 
   ///[overlayTimeOut] in seconds: decide after how much second overlay should vanishes
+  ///minimum 5 seconds of timeout is stacked
   final int overlayTimeOut;
+
+  final Color loadingIndicatorColor;
+  final Color controlsColor;
 
   VimeoPlayer({
     @required this.id,
-    this.autoPlay,
+    this.autoPlay = false,
     this.looping,
     this.position,
-    this.commencingOverlay,
+    this.commencingOverlay = true,
     this.fullScreenBackgroundColor,
-    this.overlayTimeOut,
+    this.loadingIndicatorColor,
+    this.controlsColor,
+    int overlayTimeOut,
     Key key,
-  }) : super(key: key);
+  })  : this.overlayTimeOut = max(overlayTimeOut, 5),
+        super(key: key);
 
   @override
   _VimeoPlayerState createState() => _VimeoPlayerState(
@@ -46,7 +63,8 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
   int position;
 
   _VimeoPlayerState(
-      this._id, this.autoPlay, this.looping, this.position, this._overlay);
+      this._id, this.autoPlay, this.looping, this.position, this._overlay)
+      : initialOverlay = _overlay;
 
   //Custom controller
   VideoPlayerController _controller;
@@ -72,6 +90,11 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
   double doubleTapLMargin = 10;
   double doubleTapLWidth = 400;
   double doubleTapLHeight = 160;
+
+  //overlay timeout handler
+  Timer overlayTimer;
+  //indicate if overlay to be display on commencing video or not
+  bool initialOverlay;
 
   @override
   void initState() {
@@ -100,6 +123,39 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
 
     super.initState();
+  }
+
+  ///display or vanishes the overlay i.e playing controls, etc.
+  void _toogleOverlay() {
+    //Inorder to avoid descrepancy in overlay popping up & vanishing out
+    overlayTimer?.cancel();
+    if (!_overlay) {
+      overlayTimer = Timer(Duration(seconds: widget.overlayTimeOut), () {
+        setState(() {
+          _overlay = false;
+          doubleTapRHeight = videoHeight + 36;
+          doubleTapLHeight = videoHeight + 16;
+          doubleTapRMargin = 0;
+          doubleTapLMargin = 0;
+        });
+      });
+    }
+    // Edit the size of the double tap area when showing the overlay.
+    // Made to open the "Full Screen" and "Quality" buttons
+    setState(() {
+      _overlay = !_overlay;
+      if (_overlay) {
+        doubleTapRHeight = videoHeight - 36;
+        doubleTapLHeight = videoHeight - 10;
+        doubleTapRMargin = 36;
+        doubleTapLMargin = 10;
+      } else if (!_overlay) {
+        doubleTapRHeight = videoHeight + 36;
+        doubleTapLHeight = videoHeight + 16;
+        doubleTapRMargin = 0;
+        doubleTapLMargin = 0;
+      }
+    });
   }
 
   // Draw the player elements
@@ -140,6 +196,21 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                     _seek = false;
                   }
 
+                  //vanish overlayer if so.
+                  if (initialOverlay) {
+                    overlayTimer =
+                        Timer(Duration(seconds: widget.overlayTimeOut), () {
+                      setState(() {
+                        _overlay = false;
+                        doubleTapRHeight = videoHeight + 36;
+                        doubleTapLHeight = videoHeight + 16;
+                        doubleTapRMargin = 0;
+                        doubleTapLMargin = 0;
+                      });
+                    });
+                    initialOverlay = false;
+                  }
+
                   // Rendering player elements
                   return Stack(
                     children: <Widget>[
@@ -154,36 +225,22 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                   );
                 } else {
                   return Center(
-                      heightFactor: 6,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 4,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFF22A3D2)),
-                      ));
+                    heightFactor: 6,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 4,
+                      valueColor: widget.loadingIndicatorColor != null
+                          ? AlwaysStoppedAnimation<Color>(
+                              widget.loadingIndicatorColor)
+                          : null,
+                    ),
+                  );
                 }
               },
             ),
-            onTap: () {
-              // Edit the size of the double tap area when showing the overlay.
-              // Made to open the "Full Screen" and "Quality" buttons
-              setState(() {
-                _overlay = !_overlay;
-                if (_overlay) {
-                  doubleTapRHeight = videoHeight - 36;
-                  doubleTapLHeight = videoHeight - 10;
-                  doubleTapRMargin = 36;
-                  doubleTapLMargin = 10;
-                } else if (!_overlay) {
-                  doubleTapRHeight = videoHeight + 36;
-                  doubleTapLHeight = videoHeight + 16;
-                  doubleTapRMargin = 0;
-                  doubleTapLMargin = 0;
-                }
-              });
-            },
+            onTap: _toogleOverlay,
           ),
           GestureDetector(
-              // ======= SEEKER ======= //
+              // ======= Rewind ======= //
               child: Container(
                 width: doubleTapLWidth / 2 - 30,
                 height: doubleTapLHeight - 46,
@@ -196,22 +253,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
 
               // Resize double tap blocks. Needed to open buttons
               // "Full screen" and "Quality" with overlay enabled
-              onTap: () {
-                setState(() {
-                  _overlay = !_overlay;
-                  if (_overlay) {
-                    doubleTapRHeight = videoHeight - 36;
-                    doubleTapLHeight = videoHeight - 10;
-                    doubleTapRMargin = 36;
-                    doubleTapLMargin = 10;
-                  } else if (!_overlay) {
-                    doubleTapRHeight = videoHeight + 36;
-                    doubleTapLHeight = videoHeight + 16;
-                    doubleTapRMargin = 0;
-                    doubleTapLMargin = 0;
-                  }
-                });
-              },
+              onTap: _toogleOverlay,
               onDoubleTap: () {
                 setState(() {
                   _controller.seekTo(Duration(
@@ -231,22 +273,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
               ),
               // Resize double tap blocks. Needed to open buttons
               // "Full screen" and "Quality" with overlay enabled
-              onTap: () {
-                setState(() {
-                  _overlay = !_overlay;
-                  if (_overlay) {
-                    doubleTapRHeight = videoHeight - 36;
-                    doubleTapLHeight = videoHeight - 10;
-                    doubleTapRMargin = 36;
-                    doubleTapLMargin = 10;
-                  } else if (!_overlay) {
-                    doubleTapRHeight = videoHeight + 36;
-                    doubleTapLHeight = videoHeight + 16;
-                    doubleTapRMargin = 0;
-                    doubleTapLMargin = 0;
-                  }
-                });
-              },
+              onTap: _toogleOverlay,
               onDoubleTap: () {
                 setState(() {
                   _controller.seekTo(Duration(
@@ -318,13 +345,20 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                         top: videoHeight / 2 - 30,
                         bottom: videoHeight / 2 - 30),
                     icon: _controller.value.isPlaying
-                        ? Icon(Icons.pause, size: 60.0)
-                        : Icon(Icons.play_arrow, size: 60.0),
+                        ? Icon(Icons.pause,
+                            size: 60.0, color: widget.controlsColor)
+                        : Icon(Icons.play_arrow,
+                            size: 60.0, color: widget.controlsColor),
                     onPressed: () {
                       setState(() {
-                        _controller.value.isPlaying
-                            ? _controller.pause()
-                            : _controller.play();
+                        //vanish the overlay if play button is pressed
+                        if (!_controller.value.isPlaying) {
+                          overlayTimer?.cancel();
+                          _controller.play();
+                          _overlay = !_overlay;
+                        } else {
+                          _controller.pause();
+                        }
                       });
                     }),
               ),
@@ -333,51 +367,66 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                     top: videoHeight - 70, left: videoWidth + videoMargin - 50),
                 child: IconButton(
                     alignment: AlignmentDirectional.center,
-                    icon: Icon(Icons.fullscreen, size: 30.0),
+                    icon: Icon(
+                      Icons.fullscreen,
+                      size: 30.0,
+                      color: widget.controlsColor,
+                    ),
                     onPressed: () async {
+                      final playing = _controller.value.isPlaying;
                       setState(() {
                         _controller.pause();
+                        overlayTimer?.cancel();
                       });
                       // Create a new page with a full screen player,
                       // transfer data to the player and return the position when
                       // return back. Until we returned from
                       // fullscreen - the program is pending
-                      position = await Navigator.push(
-                          context,
-                          PageRouteBuilder(
-                              opaque: false,
-                              pageBuilder: (BuildContext context, _, __) =>
-                                  FullscreenPlayer(
-                                    id: _id,
-                                    autoPlay: true,
-                                    controller: _controller,
-                                    position:
-                                        _controller.value.position.inSeconds,
-                                    initFuture: initFuture,
-                                    qualityValue: _qualityValue,
-                                    backgroundColor:
-                                        widget.fullScreenBackgroundColor,
-                                  ),
-                              transitionsBuilder: (___,
-                                  Animation<double> animation,
-                                  ____,
-                                  Widget child) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: ScaleTransition(
-                                      scale: animation, child: child),
-                                );
-                              }));
-                      setState(() {
-                        _controller.play();
-                        _seek = true;
-                      });
+                      final controllerDetails =
+                          await Navigator.push<ControllerDetails>(
+                              context,
+                              PageRouteBuilder(
+                                  opaque: false,
+                                  pageBuilder: (BuildContext context, _, __) =>
+                                      FullscreenPlayer(
+                                        id: _id,
+                                        autoPlay: playing,
+                                        controller: _controller,
+                                        position: _controller
+                                            .value.position.inSeconds,
+                                        initFuture: initFuture,
+                                        qualityValue: _qualityValue,
+                                        backgroundColor:
+                                            widget.fullScreenBackgroundColor,
+                                        overlayTimeOut: widget.overlayTimeOut,
+                                      ),
+                                  transitionsBuilder: (___,
+                                      Animation<double> animation,
+                                      ____,
+                                      Widget child) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: ScaleTransition(
+                                          scale: animation, child: child),
+                                    );
+                                  }));
+                      position = controllerDetails?.position;
+                      if (controllerDetails?.playingStatus ?? false) {
+                        setState(() {
+                          _controller.play();
+                          _seek = true;
+                        });
+                      }
                     }),
               ),
               Container(
                 margin: EdgeInsets.only(left: videoWidth + videoMargin - 48),
                 child: IconButton(
-                    icon: Icon(Icons.settings, size: 26.0),
+                    icon: Icon(
+                      Icons.settings,
+                      size: 26.0,
+                      color: widget.controlsColor,
+                    ),
                     onPressed: () {
                       position = _controller.value.position.inSeconds;
                       _seek = true;
@@ -425,6 +474,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                 alignment: Alignment(0, 0),
                 child: Text(
                   '${_twoDigits(value.position.inMinutes)}:${_twoDigits(value.position.inSeconds - value.position.inMinutes * 60)}',
+                  style: const TextStyle(color: Colors.white),
                 ),
               ),
               Container(
@@ -446,6 +496,9 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                 alignment: Alignment(0, 0),
                 child: Text(
                   '${_twoDigits(value.duration.inMinutes)}:${_twoDigits(value.duration.inSeconds - value.duration.inMinutes * 60)}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -462,6 +515,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
 
   @override
   void dispose() {
+    overlayTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
