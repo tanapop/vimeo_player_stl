@@ -1,8 +1,8 @@
 # vimeoplayer (enh)
 
-This project is enhanced & some improvements over original package (vimeoplayer)[https://pub.dev/packages/vimeoplayer]
+This project is enhanced & some improvements over original package : [vimeoplayer](https://pub.dev/packages/vimeoplayer)
 
-demo example :- (sample project)[https://github.com/nipun-solutelabs/vimeo_player_demo]
+demo example :- [sample project](https://github.com/nipun-solutelabs/vimeo_player_demo)
 
 ### new features (addons)
 
