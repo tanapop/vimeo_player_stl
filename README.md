@@ -1,4 +1,4 @@
-# vimeoplayer
+# vimeoplayer (enh)
 
 This project is enhanced & some improvements over original package [vimeoplayer](https://pub.dev/packages/vimeoplayer)
 
@@ -17,6 +17,8 @@ demo example :- (sample project)[https://github.com/nipun-solutelabs/vimeo_playe
 - improved : quality(resolution) options are displayed in sorted order
 
 ### Official docs from original package : 
+
+## vimeoplayer
 
 A new Flutter package for playing any videos from Vimeo by id. 
 
