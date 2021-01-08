@@ -45,7 +45,7 @@ class VimeoPlayer extends StatefulWidget {
     this.fullScreenBackgroundColor,
     this.loadingIndicatorColor,
     this.controlsColor,
-    int overlayTimeOut,
+    int overlayTimeOut = 0,
     Key key,
   })  : this.overlayTimeOut = max(overlayTimeOut, 5),
         super(key: key);
