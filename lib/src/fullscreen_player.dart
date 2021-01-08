@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock/wakelock.dart';
-import 'quality_links.dart';
 import 'dart:async';
 
 import '../vimeoplayer.dart';
@@ -27,9 +26,13 @@ class FullscreenPlayer extends StatefulWidget {
   final Color loadingIndicatorColor;
   final Color controlsColor;
 
+  //contains the resolution qualities of vimeo video
+  final List<MapEntry> qualityValues;
+
   FullscreenPlayer({
     @required this.id,
     @required this.overlayTimeOut,
+    @required this.qualityValues,
     this.autoPlay = false,
     this.looping,
     this.controller,
@@ -65,9 +68,9 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   _FullscreenPlayerState(this._id, this.autoPlay, this.looping, this.controller,
       this.position, this.initFuture, this.qualityValue);
 
-  // Quality Class
-  QualityLinks _quality;
-  Map _qualityValues;
+  //// Quality Class
+  //QualityLinks _quality;
+  //Map _qualityValues;
 
   // Rewind variable
   bool _seek = true;
@@ -96,11 +99,11 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
     _controller = controller;
     if (autoPlay) _controller.play();
 
-    // Load the list of video qualities
-    _quality = QualityLinks(_id); //Create class
-    _quality.getQualitiesSync().then((value) {
-      _qualityValues = value;
-    });
+    // // Load the list of video qualities
+    // _quality = QualityLinks(_id); //Create class
+    // _quality.getQualitiesSync().then((value) {
+    //   _qualityValues = value;
+    // });
 
     setState(() {
       SystemChrome.setPreferredOrientations(
@@ -318,17 +321,20 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
         context: context,
         builder: (BuildContext bc) {
           final children = <Widget>[];
-          _qualityValues.forEach((elem, value) => (children.add(new ListTile(
-              title: new Text(" ${elem.toString()} fps"),
+          //_qualityValues.forEach((elem, value) => (children.add(new ListTile(
+          widget.qualityValues.forEach((quality) => (children.add(new ListTile(
+              title: new Text(" ${quality.key.toString()} fps"),
               onTap: () => {
                     // Update application state and redraw
                     setState(() {
                       _controller.pause();
-                      _controller = VideoPlayerController.network(value);
+                      _controller =
+                          VideoPlayerController.network(quality.value);
                       _controller.setLooping(true);
                       _seek = true;
                       initFuture = _controller.initialize();
                       _controller.play();
+                      Navigator.pop(context); //close sheets
                     }),
                   }))));
 
