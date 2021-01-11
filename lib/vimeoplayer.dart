@@ -77,6 +77,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
   //contains the resolution qualities of vimeo video
   List<MapEntry> _qualityValues = [];
   var _qualityValue;
+  String _qualityKey;
 
   // Seek variable
   bool _seek = false;
@@ -140,7 +141,8 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
         _qualityValues = qualities;
       }
 
-      _qualityValue = value[value.lastKey()];
+      _qualityKey = value.lastKey();
+      _qualityValue = value[_qualityKey];
       _controller = VideoPlayerController.network(_qualityValue);
       _controller.setLooping(looping);
       if (autoPlay) _controller.play();
@@ -334,10 +336,12 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
           //_qualityValues.forEach((elem, value) => (children.add(new ListTile(
           _qualityValues.forEach((quality) => (children.add(new ListTile(
               title: new Text(" ${quality.key.toString()} fps"),
+              trailing: _qualityKey == quality.key ? Icon(Icons.check) : null,
               onTap: () => {
                     // Update application state and redraw
                     setState(() {
                       _controller.pause();
+                      _qualityKey = quality.key;
                       _qualityValue = quality.value;
                       _controller =
                           VideoPlayerController.network(_qualityValue);
@@ -442,6 +446,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                                         overlayTimeOut: widget.overlayTimeOut,
                                         controlsColor: widget.controlsColor,
                                         qualityValues: _qualityValues,
+                                        qualityKey: _qualityKey,
                                       ),
                                   transitionsBuilder: (___,
                                       Animation<double> animation,

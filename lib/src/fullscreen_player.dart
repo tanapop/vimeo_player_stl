@@ -28,11 +28,13 @@ class FullscreenPlayer extends StatefulWidget {
 
   //contains the resolution qualities of vimeo video
   final List<MapEntry> qualityValues;
+  final String qualityKey;
 
   FullscreenPlayer({
     @required this.id,
     @required this.overlayTimeOut,
     @required this.qualityValues,
+    @required this.qualityKey,
     this.autoPlay = false,
     this.looping,
     this.controller,
@@ -47,7 +49,15 @@ class FullscreenPlayer extends StatefulWidget {
 
   @override
   _FullscreenPlayerState createState() => _FullscreenPlayerState(
-      id, autoPlay, looping, controller, position, initFuture, qualityValue);
+        id,
+        autoPlay,
+        looping,
+        controller,
+        position,
+        initFuture,
+        qualityValue,
+        qualityKey,
+      );
 }
 
 class _FullscreenPlayerState extends State<FullscreenPlayer> {
@@ -64,9 +74,18 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
 
   Future<void> initFuture;
   var qualityValue;
+  String qualityKey;
 
-  _FullscreenPlayerState(this._id, this.autoPlay, this.looping, this.controller,
-      this.position, this.initFuture, this.qualityValue);
+  _FullscreenPlayerState(
+    this._id,
+    this.autoPlay,
+    this.looping,
+    this.controller,
+    this.position,
+    this.initFuture,
+    this.qualityValue,
+    this.qualityKey,
+  );
 
   //// Quality Class
   //QualityLinks _quality;
@@ -324,10 +343,12 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
           //_qualityValues.forEach((elem, value) => (children.add(new ListTile(
           widget.qualityValues.forEach((quality) => (children.add(new ListTile(
               title: new Text(" ${quality.key.toString()} fps"),
+              trailing: qualityKey == quality.key ? Icon(Icons.check) : null,
               onTap: () => {
                     // Update application state and redraw
                     setState(() {
                       _controller.pause();
+                      qualityKey = quality.key;
                       _controller =
                           VideoPlayerController.network(quality.value);
                       _controller.setLooping(true);
