@@ -14,8 +14,13 @@ import 'src/fullscreen_player.dart';
 class ControllerDetails {
   int position;
   bool playingStatus;
+  MapEntry resolutionQuality;
 
-  ControllerDetails({this.position, this.playingStatus});
+  ControllerDetails({
+    this.position,
+    this.playingStatus,
+    this.resolutionQuality,
+  });
 }
 
 // Video player class
@@ -199,6 +204,20 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
     });
   }
 
+  ///change the resolution quality of current video & start playing once loaded/buffered the demanded resolution url
+  void _changeVideoQuality([MapEntry quality, bool isPlaying = true]) {
+    _controller.pause();
+    _qualityKey = quality.key;
+    _qualityValue = quality.value;
+    _controller = VideoPlayerController.network(_qualityValue);
+    _controller.setLooping(true);
+    _seek = true;
+    initFuture = _controller.initialize();
+    if (isPlaying) {
+      _controller.play();
+    }
+  }
+
   // Draw the player elements
   @override
   Widget build(BuildContext context) {
@@ -340,15 +359,16 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
               onTap: () => {
                     // Update application state and redraw
                     setState(() {
-                      _controller.pause();
-                      _qualityKey = quality.key;
-                      _qualityValue = quality.value;
-                      _controller =
-                          VideoPlayerController.network(_qualityValue);
-                      _controller.setLooping(looping);
-                      _seek = true;
-                      initFuture = _controller.initialize();
-                      _controller.play();
+                      // _controller.pause();
+                      // _qualityKey = quality.key;
+                      // _qualityValue = quality.value;
+                      // _controller =
+                      //     VideoPlayerController.network(_qualityValue);
+                      // _controller.setLooping(looping);
+                      // _seek = true;
+                      // initFuture = _controller.initialize();
+                      // _controller.play();
+                      _changeVideoQuality(quality, _controller.value.isPlaying);
                       Navigator.pop(context); //close sheet
                     }),
                   }))));
@@ -484,11 +504,22 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                                     );
                                   }));
                       position = controllerDetails?.position;
-                      if (controllerDetails?.playingStatus ?? false) {
+                      bool didChangeQuality = !(_qualityKey ==
+                              controllerDetails?.resolutionQuality?.key ??
+                          '');
+                      if (didChangeQuality) {
                         setState(() {
-                          _controller.play();
-                          _seek = true;
+                          _changeVideoQuality(
+                              controllerDetails.resolutionQuality,
+                              controllerDetails?.playingStatus ?? false);
                         });
+                      } else {
+                        if (controllerDetails?.playingStatus ?? false) {
+                          setState(() {
+                            _controller.play();
+                            _seek = true;
+                          });
+                        }
                       }
                     }),
               ),

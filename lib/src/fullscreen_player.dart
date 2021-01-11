@@ -153,6 +153,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
       ControllerDetails(
         playingStatus: playing,
         position: _controller.value.position.inSeconds,
+        resolutionQuality: MapEntry(qualityKey, qualityValue),
       ),
     );
     return Future.value(true);
@@ -460,6 +461,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                         ControllerDetails(
                           playingStatus: playing,
                           position: _controller.value.position.inSeconds,
+                          resolutionQuality: MapEntry(qualityKey, qualityValue),
                         ),
                       );
                       // Navigator.pop(context, {
