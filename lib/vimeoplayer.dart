@@ -515,6 +515,8 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                         });
                       } else {
                         if (controllerDetails?.playingStatus ?? false) {
+                          _overlay = false;
+                          _toogleOverlay();
                           setState(() {
                             _controller.play();
                             _seek = true;
