@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'vimeoplayer.dart';
+import 'package:vimeoplayer/vimeoplayer.dart';
+
+// import '../../lib/vimeoplayer.dart';
+// import 'vimeoplayer.dart';
 
 void main() => runApp(MyApp());
 
@@ -21,12 +24,12 @@ class VideoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        resizeToAvoidBottomPadding: false,
+        // resizeToAvoidBottomPadding: false,
         backgroundColor: Color(0xFF15162B), //FF15162B // 0xFFF2F2F2
         appBar: MediaQuery.of(context).orientation == Orientation.portrait
             ? AppBar(
                 leading: BackButton(color: Colors.white),
-                title: Text('Название видео'),
+                title: Text('App Player'),
                 backgroundColor: Color(0xAA15162B),
               )
             : PreferredSize(
