@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_icons/flutter_icons.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock/wakelock.dart';
@@ -385,14 +386,21 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                 } else {
                   return Center(
                     heightFactor: 6,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 4,
-                      valueColor: widget.loadingIndicatorColor != null
-                          ? AlwaysStoppedAnimation<Color>(
-                              widget.loadingIndicatorColor)
-                          : null,
+                    child: SpinKitWave(
+                      color: Color(0xffE50B15),
+                      size: 20,
                     ),
                   );
+                  // return Center(
+                  //   heightFactor: 6,
+                  //   child: CircularProgressIndicator(
+                  //     strokeWidth: 4,
+                  //     valueColor: widget.loadingIndicatorColor != null
+                  //         ? AlwaysStoppedAnimation<Color>(
+                  //             widget.loadingIndicatorColor)
+                  //         : null,
+                  //   ),
+                  // );
                 }
               },
             ),
