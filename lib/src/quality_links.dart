@@ -22,7 +22,8 @@ class QualityLinks {
       var jsonData =
           jsonDecode(response.body)['request']['files']['progressive'];
       SplayTreeMap videoList = SplayTreeMap.fromIterable(jsonData,
-          key: (item) => "${item['quality']} ${item['fps']}",
+          // key: (item) => "${item['quality']} ${item['fps']}",
+          key: (item) => "${item['quality']} ",
           value: (item) => item['url']);
       return videoList;
     } catch (error) {

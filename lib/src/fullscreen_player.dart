@@ -7,6 +7,7 @@ import 'package:wakelock/wakelock.dart';
 import 'dart:async';
 
 import '../vimeoplayer.dart';
+import 'meedu_player_status.dart';
 
 /// Full screen video player class
 class FullscreenPlayer extends StatefulWidget {
@@ -111,6 +112,17 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
   Timer overlayTimer;
   //indicate if overlay to be display on commencing video or not
   bool initialOverlay = true;
+
+  double volumeBeforeMute = 0;
+  bool mute = false;
+
+  Timer _timer;
+  bool _showControls = true;
+
+  // OBSERVABLES
+  Duration positionVideo = Duration.zero;
+  Duration sliderPosition = Duration.zero;
+  Duration duration = Duration.zero;
 
   @override
   void initState() {
@@ -343,7 +355,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
           final children = <Widget>[];
           //_qualityValues.forEach((elem, value) => (children.add(new ListTile(
           widget.qualityValues.forEach((quality) => (children.add(new ListTile(
-              title: new Text(" ${quality.key.toString()} fps"),
+              title: new Text(" ${quality.key.toString()}"),
               trailing: qualityKey == quality.key ? Icon(Icons.check) : null,
               onTap: () => {
                     // Update application state and redraw
@@ -402,18 +414,18 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                         _controller.value.duration == _controller.value.position
                             ? Icon(
                                 Icons.replay,
-                                size: 60.0,
+                                size: 80.0,
                                 color: widget.controlsColor,
                               )
                             : _controller.value.isPlaying
                                 ? Icon(
                                     Icons.pause,
-                                    size: 60.0,
+                                    size: 80.0,
                                     color: widget.controlsColor,
                                   )
                                 : Icon(
                                     Icons.play_arrow,
-                                    size: 60.0,
+                                    size: 80.0,
                                     color: widget.controlsColor,
                                   ),
                     onPressed: () {
@@ -437,13 +449,23 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                       });
                     }),
               ),
+              // Mute Button
+              Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    // decoration: BoxDecoration(color: Colors.grey),
+                    margin: EdgeInsets.only(
+                        top: videoHeight - 60,
+                        left: videoWidth + videoMargin - 120),
+                    child: _muteButton(),
+                  )),
               Container(
                 margin: EdgeInsets.only(
-                    top: videoHeight - 80, left: videoWidth + videoMargin - 50),
+                    top: videoHeight - 55, left: videoWidth + videoMargin - 60),
                 child: IconButton(
                     alignment: AlignmentDirectional.center,
                     icon: Icon(Icons.fullscreen,
-                        size: 30.0, color: widget.controlsColor),
+                        size: 50.0, color: widget.controlsColor),
                     onPressed: () {
                       final playing = _controller.value.isPlaying;
                       overlayTimer?.cancel();
@@ -475,7 +497,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                 child: IconButton(
                     icon: Icon(
                       Icons.settings,
-                      size: 26.0,
+                      size: 40.0,
                       color: widget.controlsColor,
                     ),
                     onPressed: () {
@@ -513,13 +535,13 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                 ),
               ),
               Container(
-                height: 20,
-                width: videoWidth - 92,
+                height: 30,
+                width: videoWidth - 92 - 120,
                 child: VideoProgressIndicator(
                   _controller,
                   allowScrubbing: true,
                   colors: VideoProgressColors(
-                    playedColor: Color(0xFF22A3D2),
+                    playedColor: Color(0xffE50B15),
                     backgroundColor: Color(0x5515162B),
                     bufferedColor: Color(0x5583D8F7),
                   ),
@@ -544,6 +566,107 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
       },
     );
   }
+
+  Widget _muteButton() {
+    return IconButton(
+        alignment: AlignmentDirectional.center,
+        icon: Icon(
+          mute ? Icons.volume_off : Icons.volume_up,
+          size: 40.0,
+          color: widget.controlsColor,
+        ),
+        onPressed: () async {
+          final playing = _controller.value.isPlaying;
+          setState(() {
+            // _controller;
+            // overlayTimer?.cancel();
+            mute = !mute;
+            setMute(mute);
+          });
+        });
+  }
+
+  Future<void> setVolume(double volume) async {
+    assert(volume >= 0.0 && volume <= 1.0); // validate the param
+    volumeBeforeMute = _controller.value.volume;
+    await _controller?.setVolume(volume);
+  }
+
+  /// set the video player to mute or sound
+  ///
+  /// [enabled] if is true the video player is muted
+  Future<void> setMute(bool enabled) async {
+    if (enabled) {
+      volumeBeforeMute = _controller.value.volume;
+    }
+    mute = enabled;
+    await this.setVolume(enabled ? 0 : volumeBeforeMute);
+  }
+
+  /// fast Forward (10 seconds)
+  Future<void> fastForward() async {
+    final to = positionVideo.inSeconds + 10;
+    if (duration.inSeconds > to) {
+      await seekTo(Duration(seconds: to));
+    }
+  }
+
+  /// rewind (10 seconds)
+  Future<void> rewind() async {
+    final to = positionVideo.inSeconds - 10;
+    await seekTo(Duration(seconds: to < 0 ? 0 : to));
+  }
+
+  /// seek the current video position
+  Future<void> seekTo(Duration position) async {
+    await _controller?.seekTo(Duration(seconds: position.inSeconds));
+
+    if (playerStatus.stopped) {
+      await play();
+    }
+  }
+
+  /// play the current video
+  ///
+  /// [repeat] if is true the player go to Duration.zero before play
+  Future<void> play({bool repeat = false}) async {
+    if (repeat) {
+      await seekTo(Duration.zero);
+    }
+    await _controller?.play();
+    playerStatus.status.value = PlayerStatus.playing;
+
+    _hideTaskControls();
+  }
+
+  /// pause the current video
+  ///
+  /// [notify] if is true and the events is not null we notifiy the event
+  Future<void> pause({bool notify = true}) async {
+    await _controller?.pause();
+    playerStatus.status.value = PlayerStatus.paused;
+  }
+
+  /// create a taks to hide controls after certain time
+  void _hideTaskControls() {
+    _timer = Timer(Duration(seconds: 5), () {
+      this.controls = false;
+      _timer = null;
+    });
+  }
+
+  /// show or hide the player controls
+  set controls(bool visible) {
+    _showControls = visible;
+    _timer?.cancel();
+    if (visible) {
+      _hideTaskControls();
+    }
+  }
+
+  /// the playerStatus to notify the player events like paused,playing or stopped
+  /// [playerStatus] has a [status] observable
+  final MeeduPlayerStatus playerStatus = MeeduPlayerStatus();
 
   ///Convert the integer number in atleast 2 digit format (i.e appending 0 in front if any)
   String _twoDigits(int n) => n.toString().padLeft(2, '0');
