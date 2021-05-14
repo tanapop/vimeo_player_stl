@@ -580,7 +580,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                 child: IconButton(
                     icon: Icon(
                       Icons.settings_applications,
-                      size: 26.0,
+                      size: 40.0,
                       color: widget.controlsColor,
                     ),
                     onPressed: () {

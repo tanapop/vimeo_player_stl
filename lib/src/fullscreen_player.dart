@@ -496,7 +496,7 @@ class _FullscreenPlayerState extends State<FullscreenPlayer> {
                 margin: EdgeInsets.only(left: videoWidth + videoMargin - 48),
                 child: IconButton(
                     icon: Icon(
-                      Icons.settings,
+                      Icons.settings_applications,
                       size: 40.0,
                       color: widget.controlsColor,
                     ),
