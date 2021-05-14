@@ -511,7 +511,7 @@ class _VimeoPlayerState extends State<VimeoPlayer> {
                   // decoration: BoxDecoration(color: Colors.grey),
                   margin: EdgeInsets.only(
                       top: videoHeight - 55,
-                      left: videoWidth + videoMargin - 60),
+                      left: videoWidth + videoMargin - 70),
                   child: _fullScreenButton(),
                 ),
               ),
